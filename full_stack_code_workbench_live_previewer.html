@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Full-Stack Code Workbench & Live Previewer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            400: '#2dd4bf',
+                            500: '#14b8a6',
+                            900: '#134e4a',
+                            dark: '#090d16',
+                            panel: '#0f172a',
+                            accent: '#10b981',
+                            cyan: '#06b6d4',
+                            purple: '#a855f7'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for Cyberpunk UI Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- CodeMirror for enhanced text editing -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/material-ocean.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/htmlmixed/htmlmixed.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/css/css.min.css"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/sql/sql.min.js"></script>
+    
+    <style>
+        /* Custom scrollbars & CodeMirror tweaks */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090d16;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #06b6d4;
+        }
+        .CodeMirror {
+            height: 100% !important;
+            font-family: 'Fira Code', monospace, consolas, monospace;
+            font-size: 13px;
+            background-color: #0b1120 !important;
+        }
+        .CodeMirror-gutters {
+            background-color: #0f172a !important;
+            border-right: 1px solid #1e293b !important;
+        }
+        .glow-accent {
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.25);
+        }
+        .glow-cyan {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.25);
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col overflow-hidden bg-slate-950 text-slate-200 font-sans selection:bg-cyan-500 selection:text-slate-950">
+
+    <!-- Navigation Header -->
+    <header class="h-14 border-b border-slate-800 bg-slate-900/90 px-4 flex items-center justify-between shrink-0 z-20 backdrop-blur-md">
+        <div class="flex items-center gap-3">
+            <div class="h-8 w-8 rounded-lg bg-gradient-to-tr from-cyan-500 via-teal-400 to-emerald-400 flex items-center justify-center text-slate-950 font-black text-lg shadow-lg shadow-cyan-500/20">
+                <i class="fa-solid font-mono fa-code"></i>
+            </div>
+            <div>
+                <h1 class="text-base font-bold tracking-wide bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
+                    CODE WORKBENCH <span class="text-xs font-semibold px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800/50">FULL-STACK</span>
+                </h1>
+            </div>
+        </div>
+
+        <!-- Action Controls -->
+        <div class="flex items-center gap-2">
+            <!-- Run App Button -->
+            <button id="btn-build" onclick="buildAndRunApp()" class="px-4 py-1.5 rounded-md bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-emerald-500/20 hover:scale-105 active:scale-95">
+                <i class="fa-solid fa-play text-sm"></i>
+                <span>Build & Run</span>
+            </button>
+
+            <div class="h-5 w-px bg-slate-800 mx-1"></div>
+
+            <!-- Auto Refresh Toggle -->
+            <label class="flex items-center gap-2 text-xs text-slate-400 cursor-pointer hover:text-slate-200 px-2">
+                <input type="checkbox" id="auto-compile" checked class="rounded bg-slate-800 border-slate-700 text-cyan-500 focus:ring-0 focus:ring-offset-0">
+                <span>Auto-Build</span>
+            </label>
+
+            <!-- Layout Toggle Button -->
+            <button id="btn-layout" onclick="toggleLayout()" title="Toggle Horizontal/Vertical Layout" class="p-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-cyan-400 text-xs transition border border-slate-700">
+                <i class="fa-solid fa-columns" id="layout-icon"></i>
+            </button>
+
+            <!-- Copy Combined Code Button -->
+            <button onclick="copyCombinedCode()" title="Copy Merged HTML/CSS/JS Code" class="p-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-cyan-400 text-xs transition border border-slate-700">
+                <i class="fa-regular fa-copy"></i>
+            </button>
+
+            <!-- Export / Download App Button -->
+            <button onclick="exportSingleFile()" title="Download as Single HTML File" class="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-cyan-400 hover:text-cyan-300 text-xs font-semibold flex items-center gap-1.5 border border-slate-700 transition">
+                <i class="fa-solid fa-download"></i>
+                <span class="hidden sm:inline">Export HTML</span>
+            </button>
+
+            <!-- Reset Template -->
+            <button onclick="resetToTemplate()" title="Reset to Default Demo Template" class="p-2 rounded-md bg-slate-800 hover:bg-rose-950 text-slate-400 hover:text-rose-400 text-xs transition border border-slate-700">
+                <i class="fa-solid fa-rotate-left"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workbench Area -->
+    <main id="workbench-container" class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        
+        <!-- LEFT PANEL: Code Editors & Tabs -->
+        <section id="editor-panel" class="w-full md:w-1/2 flex flex-col bg-slate-950 border-r border-slate-800 overflow-hidden">
+            
+            <!-- Editor Tabs Header -->
+            <div class="flex items-center justify-between bg-slate-900 border-b border-slate-800 px-2 overflow-x-auto shrink-0">
+                <div class="flex items-center gap-1 py-1" id="tab-headers">
+                    <!-- Tab Buttons -->
+                    <button onclick="switchTab('html')" id="tab-btn-html" class="tab-btn active border-b-2 border-cyan-400 text-cyan-400 bg-slate-800/60 px-3 py-1.5 text-xs font-mono font-medium rounded-t flex items-center gap-2 transition">
+                        <i class="fa-brands fa-html5 text-orange-500"></i> index.html
+                    </button>
+                    <button onclick="switchTab('css')" id="tab-btn-css" class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-200 px-3 py-1.5 text-xs font-mono font-medium rounded-t flex items-center gap-2 transition">
+                        <i class="fa-brands fa-css3-alt text-blue-400"></i> styles.css
+                    </button>
+                    <button onclick="switchTab('js')" id="tab-btn-js" class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-200 px-3 py-1.5 text-xs font-mono font-medium rounded-t flex items-center gap-2 transition">
+                        <i class="fa-brands fa-js text-yellow-400"></i> app.js
+                    </button>
+                    <button onclick="switchTab('sql')" id="tab-btn-sql" class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-200 px-3 py-1.5 text-xs font-mono font-medium rounded-t flex items-center gap-2 transition">
+                        <i class="fa-solid fa-database text-emerald-400"></i> db.sql
+                    </button>
+                    <button onclick="switchTab('node')" id="tab-btn-node" class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-200 px-3 py-1.5 text-xs font-mono font-medium rounded-t flex items-center gap-2 transition">
+                        <i class="fa-brands fa-node-js text-green-500"></i> server.js
+                    </button>
+                </div>
+                
+                <span class="text-[10px] uppercase font-mono text-slate-500 px-2 hidden sm:inline" id="active-lang-indicator">HTML5 Mode</span>
+            </div>
+
+            <!-- Code Editors Container -->
+            <div class="flex-1 relative overflow-hidden bg-slate-950">
+                <!-- HTML Editor Container -->
+                <div id="editor-container-html" class="editor-pane absolute inset-0">
+                    <textarea id="code-html"></textarea>
+                </div>
+                <!-- CSS Editor Container -->
+                <div id="editor-container-css" class="editor-pane absolute inset-0 hidden">
+                    <textarea id="code-css"></textarea>
+                </div>
+                <!-- JS Editor Container -->
+                <div id="editor-container-js" class="editor-pane absolute inset-0 hidden">
+                    <textarea id="code-js"></textarea>
+                </div>
+                <!-- SQL Editor Container -->
+                <div id="editor-container-sql" class="editor-pane absolute inset-0 hidden">
+                    <textarea id="code-sql"></textarea>
+                </div>
+                <!-- Node Backend Reference Container -->
+                <div id="editor-container-node" class="editor-pane absolute inset-0 hidden">
+                    <textarea id="code-node"></textarea>
+                </div>
+            </div>
+
+            <!-- Editor Footer Toolbar -->
+            <div class="h-7 bg-slate-900 border-t border-slate-800 px-3 flex items-center justify-between text-[11px] font-mono text-slate-400 shrink-0">
+                <div class="flex items-center gap-3">
+                    <span id="cursor-pos">Ln 1, Col 1</span>
+                    <span class="text-slate-600">|</span>
+                    <span id="doc-size">0 chars</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="flex items-center gap-1.5 text-emerald-400">
+                        <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        SQL Engine Ready (SQL.js)
+                    </span>
+                </div>
+            </div>
+        </section>
+
+        <!-- RIGHT PANEL: Interactive Live Previewer -->
+        <section id="preview-panel" class="w-full md:w-1/2 flex flex-col bg-slate-900 overflow-hidden relative">
+            
+            <!-- Preview Controls Bar -->
+            <div class="h-9 bg-slate-900 border-b border-slate-800 px-3 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2">
+                    <span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+                    <span class="text-xs font-mono font-semibold text-slate-300">Live Preview Window</span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="refreshPreview()" title="Reload Preview Page" class="p-1 px-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition flex items-center gap-1">
+                        <i class="fa-solid fa-arrows-rotate text-[10px]"></i> Refresh
+                    </button>
+                    <button onclick="clearConsole()" title="Clear Preview Logs" class="p-1 px-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-xs transition">
+                        Clear Console
+                    </button>
+                </div>
+            </div>
+
+            <!-- Preview Canvas iFrame Container -->
+            <div class="flex-1 bg-slate-950 relative overflow-hidden">
+                <iframe id="preview-frame" class="w-full h-full border-0 bg-white" sandbox="allow-scripts allow-modals allow-same-origin"></iframe>
+            </div>
+
+            <!-- Console Log Output Drawer -->
+            <div id="console-drawer" class="h-32 border-t border-slate-800 bg-slate-950 flex flex-col overflow-hidden shrink-0">
+                <div class="h-6 bg-slate-900/80 px-3 flex items-center justify-between border-b border-slate-800/80 text-[11px] font-mono text-slate-400">
+                    <span class="flex items-center gap-1.5 font-semibold text-cyan-400">
+                        <i class="fa-solid fa-terminal text-[10px]"></i> Runtime Console & SQL Logs
+                    </span>
+                    <span id="log-count" class="text-[10px] bg-slate-800 px-1.5 rounded text-slate-400">0 logs</span>
+                </div>
+                <div id="console-logs" class="flex-1 p-2 font-mono text-xs overflow-y-auto space-y-1 bg-slate-950/90 text-slate-300">
+                    <div class="text-slate-500 italic text-[11px]">[System initialized. Run app to execute client JS and SQLite queries...]</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Notifications Toast -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-slate-800 text-slate-100 border border-cyan-500/50 px-4 py-2 rounded-lg shadow-xl text-xs font-mono flex items-center gap-2 opacity-0 pointer-events-none transition-all transform translate-y-2 z-50">
+        <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toast-message">Action completed successfully</span>
+    </div>
+
+    <script>
+        // Default Sample Code Templates (Working Full-Stack Task/Notes Dashboard with Client SQL)
+        const DEFAULT_CODE = {
+            html: `<!-- HTML Markup for Interactive Task & SQL Dashboard -->
+<div class="app-card">
+    <header class="app-header">
+        <h1><i class="fa-solid fa-layer-group"></i> SQL Task Manager</h1>
+        <p class="subtitle">Full-Stack SQLite Single-Page App Demo</p>
+    </header>
+
+    <!-- Task Form -->
+    <form id="task-form" class="task-form">
+        <input type="text" id="task-input" placeholder="Enter a new task title..." required />
+        <select id="category-select">
+            <option value="Work">Work</option>
+            <option value="Personal">Personal</option>
+            <option value="Code">Code</option>
+        </select>
+        <button type="submit"><i class="fa-solid fa-plus"></i> Add Task</button>
+    </form>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+        <div class="stat"><span class="label">Total Tasks:</span> <strong id="stat-total">0</strong></div>
+        <div class="stat"><span class="label">Completed:</span> <strong id="stat-done">0</strong></div>
+    </div>
+
+    <!-- Task List Container -->
+    <div class="list-container">
+        <ul id="task-list"></ul>
+    </div>
+
+    <!-- Direct SQL Query Console -->
+    <div class="sql-box">
+        <h3><i class="fa-solid fa-database"></i> Live SQLite In-Browser Tester</h3>
+        <div class="query-row">
+            <input type="text" id="custom-query" value="SELECT * FROM tasks ORDER BY id DESC;" />
+            <button id="run-sql-btn"><i class="fa-solid fa-play"></i> Query DB</button>
+        </div>
+        <pre id="sql-output">Execute query to see SQLite response...</pre>
+    </div>
+</div>`,
+
+            css: `/* CSS Styling for Task Dashboard */
+:root {
+    --bg-color: #0f172a;
+    --card-bg: #1e293b;
+    --primary: #06b6d4;
+    --accent: #10b981;
+    --text: #f8fafc;
+    --border: #334155;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.app-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    width: 100%;
+    max-width: 550px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+
+.app-header h1 {
+    margin: 0;
+    font-size: 1.4rem;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.subtitle {
+    margin: 4px 0 16px 0;
+    font-size: 0.8rem;
+    color: #94a3b8;
+}
+
+.task-form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.task-form input, .task-form select {
+    background: #0f172a;
+    border: 1px solid var(--border);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.task-form input { flex: 1; }
+
+.task-form button, .query-row button {
+    background: var(--accent);
+    color: #022c22;
+    font-weight: bold;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.task-form button:hover { opacity: 0.9; }
+
+.stats-bar {
+    display: flex;
+    justify-content: space-between;
+    background: #0f172a;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    margin-bottom: 16px;
+}
+
+.stat .label { color: #94a3b8; }
+
+.list-container ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.task-item {
+    background: #0f172a;
+    border: 1px solid var(--border);
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.task-item.completed span {
+    text-decoration: line-through;
+    color: #64748b;
+}
+
+.badge {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #334155;
+    margin-left: 8px;
+}
+
+.delete-btn {
+    color: #f43f5e;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+.sql-box {
+    margin-top: 24px;
+    border-top: 1px border-slate-700;
+    padding-top: 16px;
+}
+
+.sql-box h3 {
+    font-size: 0.9rem;
+    color: #a855f7;
+    margin: 0 0 8px 0;
+}
+
+.query-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.query-row input {
+    flex: 1;
+    background: #0f172a;
+    border: 1px solid var(--border);
+    color: #22d3ee;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.8rem;
+}
+
+#sql-output {
+    background: #090d16;
+    border: 1px solid var(--border);
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    color: #a7f3d0;
+    max-height: 120px;
+    overflow-y: auto;
+}`,
+
+            js: `// Client-side JS Logic leveraging In-Memory SQLite via SQL.js
+let db = null;
+
+// Initialize SQLite Database
+async function initDatabase() {
+    try {
+        console.log("Initializing in-browser SQLite database...");
+        const SQL = await initSqlJs({
+            locateFile: file => \`https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/\${file}\`
+        });
+        
+        db = new SQL.Database();
+        
+        // Execute initial SQL schema creation
+        db.run(\`
+            CREATE TABLE IF NOT EXISTS tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                category TEXT DEFAULT 'General',
+                completed INTEGER DEFAULT 0
+            );
+        \`);
+        
+        // Seed default rows
+        db.run("INSERT INTO tasks (title, category) VALUES ('Build single-page web app', 'Code');");
+        db.run("INSERT INTO tasks (title, category) VALUES ('Test SQLite query runner', 'Work');");
+
+        console.log("SQLite DB Ready!");
+        renderTasks();
+    } catch (err) {
+        console.error("Database initialization failed:", err);
+    }
+}
+
+// Fetch and render tasks from SQLite DB
+function renderTasks() {
+    if (!db) return;
+
+    const res = db.exec("SELECT * FROM tasks ORDER BY id DESC;");
+    const taskList = document.getElementById('task-list');
+    taskList.innerHTML = '';
+
+    let total = 0;
+    let completedCount = 0;
+
+    if (res.length > 0) {
+        const rows = res[0].values;
+        total = rows.length;
+
+        rows.forEach(row => {
+            const [id, title, category, completed] = row;
+            if (completed) completedCount++;
+
+            const li = document.createElement('li');
+            li.className = \`task-item \${completed ? 'completed' : ''}\`;
+            li.innerHTML = \`
+                <div>
+                    <input type="checkbox" \${completed ? 'checked' : ''} onchange="toggleTask(\${id}, \${completed ? 0 : 1})">
+                    <span style="margin-left: 8px;">\${title}</span>
+                    <span class="badge">\${category}</span>
+                </div>
+                <button class="delete-btn" onclick="deleteTask(\${id})"><i class="fa-solid fa-trash"></i></button>
+            \`;
+            taskList.appendChild(li);
+        });
+    }
+
+    document.getElementById('stat-total').innerText = total;
+    document.getElementById('stat-done').innerText = completedCount;
+}
+
+// Add task query
+document.getElementById('task-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const title = document.getElementById('task-input').value;
+    const category = document.getElementById('category-select').value;
+
+    db.run("INSERT INTO tasks (title, category) VALUES (?, ?);", [title, category]);
+    document.getElementById('task-input').value = '';
+    renderTasks();
+});
+
+// Toggle completion status query
+window.toggleTask = function(id, newStatus) {
+    db.run("UPDATE tasks SET completed = ? WHERE id = ?;", [newStatus, id]);
+    renderTasks();
+};
+
+// Delete task query
+window.deleteTask = function(id) {
+    db.run("DELETE FROM tasks WHERE id = ?;", [id]);
+    renderTasks();
+};
+
+// Custom query tester
+document.getElementById('run-sql-btn').addEventListener('click', () => {
+    const query = document.getElementById('custom-query').value;
+    const outputEl = document.getElementById('sql-output');
+    
+    try {
+        const result = db.exec(query);
+        outputEl.textContent = JSON.stringify(result, null, 2);
+    } catch (err) {
+        outputEl.textContent = "Error: " + err.message;
+    }
+});
+
+// Run startup
+initDatabase();`,
+
+            sql: `-- SQL Schema & Query Reference Sheet
+-- You can reference or adapt these table definitions for your app
+
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    category TEXT DEFAULT 'General',
+    completed INTEGER DEFAULT 0
+);
+
+-- Sample Data Insertion Queries
+INSERT INTO users (username, email) VALUES ('dev_user', 'dev@example.com');
+INSERT INTO tasks (title, category) VALUES ('Initialize App Workbench', 'Code');
+
+-- Analytics & Aggregation Query Examples
+SELECT category, COUNT(*) as count 
+FROM tasks 
+GROUP BY category;`,
+
+            node: `// Node.js Express Backend Code Snippet Reference
+// (Stored for backend architecture planning & full-stack API setup)
+
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(express.json());
+
+// Sample REST API Endpoint
+app.get('/api/tasks', (req, res) => {
+    // Database query logic here
+    res.json({
+        success: true,
+        data: [
+            { id: 1, title: "Server task 1", category: "Backend" },
+            { id: 2, title: "Server task 2", category: "API" }
+        ]
+    });
+});
+
+app.post('/api/tasks', (req, res) => {
+    const { title, category } = req.body;
+    res.status(201).json({ message: "Task created successfully", task: { title, category } });
+});
+
+app.listen(PORT, () => {
+    console.log(\`Server running on port \${PORT}\`);
+});`
+        };
+
+        // Active Code Editors Dictionary
+        const editors = {};
+        let activeTab = 'html';
+        let isHorizontalLayout = true;
+
+        // Initialize CodeMirror instances
+        window.addEventListener('DOMContentLoaded', () => {
+            initEditors();
+            buildAndRunApp();
+        });
+
+        function initEditors() {
+            const editorConfig = {
+                theme: 'material-ocean',
+                lineNumbers: true,
+                autoCloseBrackets: true,
+                matchBrackets: true,
+                tabSize: 2,
+                indentUnit: 2,
+                lineWrapping: true
+            };
+
+            editors.html = CodeMirror.fromTextArea(document.getElementById('code-html'), { ...editorConfig, mode: 'htmlmixed' });
+            editors.css = CodeMirror.fromTextArea(document.getElementById('code-css'), { ...editorConfig, mode: 'css' });
+            editors.js = CodeMirror.fromTextArea(document.getElementById('code-js'), { ...editorConfig, mode: 'javascript' });
+            editors.sql = CodeMirror.fromTextArea(document.getElementById('code-sql'), { ...editorConfig, mode: 'sql' });
+            editors.node = CodeMirror.fromTextArea(document.getElementById('code-node'), { ...editorConfig, mode: 'javascript' });
+
+            // Load Initial Content
+            editors.html.setValue(DEFAULT_CODE.html);
+            editors.css.setValue(DEFAULT_CODE.css);
+            editors.js.setValue(DEFAULT_CODE.js);
+            editors.sql.setValue(DEFAULT_CODE.sql);
+            editors.node.setValue(DEFAULT_CODE.node);
+
+            // Add Event Listeners for Cursor tracking & Auto-Compile
+            Object.keys(editors).forEach(key => {
+                editors[key].on('cursorActivity', () => updateCursorInfo(editors[key]));
+                editors[key].on('change', () => {
+                    updateCursorInfo(editors[key]);
+                    if (document.getElementById('auto-compile').checked) {
+                        debounce(buildAndRunApp, 1000)();
+                    }
+                });
+            });
+
+            updateCursorInfo(editors.html);
+        }
+
+        // Switch Active Code Tab
+        function switchTab(tab) {
+            activeTab = tab;
+            
+            // Update Tab Headers Styling
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active', 'border-cyan-400', 'text-cyan-400', 'bg-slate-800/60');
+                btn.classList.add('border-transparent', 'text-slate-400');
+            });
+
+            const activeBtn = document.getElementById(`tab-btn-${tab}`);
+            activeBtn.classList.add('active', 'border-cyan-400', 'text-cyan-400', 'bg-slate-800/60');
+            activeBtn.classList.remove('border-transparent', 'text-slate-400');
+
+            // Hide/Show Editor Pane
+            document.querySelectorAll('.editor-pane').forEach(pane => pane.classList.add('hidden'));
+            document.getElementById(`editor-container-${tab}`).classList.remove('hidden');
+
+            // Language Indicator
+            const langMap = { html: 'HTML5', css: 'CSS3', js: 'JavaScript', sql: 'SQLite', node: 'Node.js Express' };
+            document.getElementById('active-lang-indicator').innerText = `${langMap[tab]} Mode`;
+
+            // Refresh CodeMirror Layout
+            setTimeout(() => {
+                editors[tab].refresh();
+                editors[tab].focus();
+                updateCursorInfo(editors[tab]);
+            }, 50);
+        }
+
+        // Update Cursor Status Info in Footer
+        function updateCursorInfo(cmInstance) {
+            const pos = cmInstance.getCursor();
+            const text = cmInstance.getValue();
+            document.getElementById('cursor-pos').innerText = `Ln ${pos.line + 1}, Col ${pos.ch + 1}`;
+            document.getElementById('doc-size').innerText = `${text.length} chars`;
+        }
+
+        // Toggle Split View Layout (Side-by-Side vs Stacked)
+        function toggleLayout() {
+            const container = document.getElementById('workbench-container');
+            const editorPanel = document.getElementById('editor-panel');
+            const previewPanel = document.getElementById('preview-panel');
+            const icon = document.getElementById('layout-icon');
+
+            isHorizontalLayout = !isHorizontalLayout;
+
+            if (isHorizontalLayout) {
+                container.className = "flex-1 flex flex-col md:flex-row overflow-hidden relative";
+                editorPanel.className = "w-full md:w-1/2 flex flex-col bg-slate-950 border-r border-slate-800 overflow-hidden";
+                previewPanel.className = "w-full md:w-1/2 flex flex-col bg-slate-900 overflow-hidden relative";
+                icon.className = "fa-solid fa-columns";
+            } else {
+                container.className = "flex-1 flex flex-col overflow-hidden relative";
+                editorPanel.className = "w-full h-1/2 flex flex-col bg-slate-950 border-b border-slate-800 overflow-hidden";
+                previewPanel.className = "w-full h-1/2 flex flex-col bg-slate-900 overflow-hidden relative";
+                icon.className = "fa-solid fa-window-maximize";
+            }
+
+            // Refresh Active Editor
+            editors[activeTab].refresh();
+        }
+
+        // Compile & Render Code in iFrame
+        function buildAndRunApp() {
+            const htmlCode = editors.html.getValue();
+            const cssCode = editors.css.getValue();
+            const jsCode = editors.js.getValue();
+
+            const previewFrame = document.getElementById('preview-frame');
+            const iframeDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+
+            // Clear Console Logs for New Build
+            clearConsole();
+            logConsole("Build started... Injecting HTML/CSS/JS and SQLite Engine...", "info");
+
+            // Complete Document Structure with Embedded CDNs (FontAwesome & SQL.js)
+            const fullDocument = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SQLite WebAssembly Engine CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"><\/script>
+    <style>
+        ${cssCode}
+    </style>
+</head>
+<body>
+    ${htmlCode}
+
+    <script>
+        // Intercept Console Logs to Parent Drawer
+        (function() {
+            const origLog = console.log;
+            const origError = console.error;
+            const origWarn = console.warn;
+
+            console.log = function(...args) {
+                origLog.apply(console, args);
+                window.parent.postMessage({ type: 'LOG', text: args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ') }, '*');
+            };
+
+            console.error = function(...args) {
+                origError.apply(console, args);
+                window.parent.postMessage({ type: 'ERROR', text: args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ') }, '*');
+            };
+
+            console.warn = function(...args) {
+                origWarn.apply(console, args);
+                window.parent.postMessage({ type: 'WARN', text: args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ') }, '*');
+            };
+
+            window.onerror = function(msg, url, line) {
+                window.parent.postMessage({ type: 'ERROR', text: 'Error: ' + msg + ' (Line ' + line + ')' }, '*');
+                return false;
+            };
+        })();
+    <\/script>
+    <script>
+        try {
+            ${jsCode}
+        } catch (err) {
+            console.error(err.message);
+        }
+    <\/script>
+</body>
+</html>`;
+
+            iframeDoc.open();
+            iframeDoc.write(fullDocument);
+            iframeDoc.close();
+
+            showToast("App built & executed successfully!", "success");
+        }
+
+        // Listen for console messages from iframe
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type) {
+                const { type, text } = event.data;
+                logConsole(text, type.toLowerCase());
+            }
+        });
+
+        // Console Log Display Utility
+        let logCounter = 0;
+        function logConsole(message, type = 'info') {
+            const consoleEl = document.getElementById('console-logs');
+            const logItem = document.createElement('div');
+            
+            let colorClass = 'text-slate-300';
+            if (type === 'error') colorClass = 'text-rose-400 font-bold';
+            if (type === 'warn') colorClass = 'text-amber-400';
+            if (type === 'info') colorClass = 'text-cyan-400';
+
+            const timestamp = new Date().toLocaleTimeString().split(' ')[0];
+            logItem.className = `${colorClass} flex items-start gap-2 text-[11px] font-mono leading-relaxed border-b border-slate-900/50 pb-0.5`;
+            logItem.innerHTML = `<span class="text-slate-600 shrink-0">[${timestamp}]</span> <span>${escapeHtml(message)}</span>`;
+
+            consoleEl.appendChild(logItem);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+
+            logCounter++;
+            document.getElementById('log-count').innerText = `${logCounter} logs`;
+        }
+
+        function clearConsole() {
+            document.getElementById('console-logs').innerHTML = '';
+            logCounter = 0;
+            document.getElementById('log-count').innerText = '0 logs';
+        }
+
+        function refreshPreview() {
+            buildAndRunApp();
+        }
+
+        // Bundle and Download Single Standalone HTML File
+        function exportSingleFile() {
+            const htmlCode = editors.html.getValue();
+            const cssCode = editors.css.getValue();
+            const jsCode = editors.js.getValue();
+
+            const singleFileContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Standalone Web App</title>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SQLite WebAssembly Engine CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"><\/script>
+    <style>
+${cssCode}
+    </style>
+</head>
+<body>
+${htmlCode}
+
+    <script>
+${jsCode}
+    <\/script>
+</body>
+</html>`;
+
+            const blob = new Blob([singleFileContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'app-single-page.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showToast("Exported app-single-page.html!", "success");
+        }
+
+        // Copy Combined Code to Clipboard
+        function copyCombinedCode() {
+            const combined = `<!-- HTML -->\n${editors.html.getValue()}\n\n/* CSS */\n${editors.css.getValue()}\n\n// JavaScript\n${editors.js.getValue()}`;
+            
+            // Clipboard fallback as requested
+            const tempInput = document.createElement('textarea');
+            tempInput.value = combined;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            showToast("Copied HTML/CSS/JS bundle to clipboard!", "success");
+        }
+
+        // Reset to Default Demo Template
+        function resetToTemplate() {
+            editors.html.setValue(DEFAULT_CODE.html);
+            editors.css.setValue(DEFAULT_CODE.css);
+            editors.js.setValue(DEFAULT_CODE.js);
+            editors.sql.setValue(DEFAULT_CODE.sql);
+            editors.node.setValue(DEFAULT_CODE.node);
+            buildAndRunApp();
+            showToast("Reset to default full-stack sample template", "info");
+        }
+
+        // Debounce utility function
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+        // Helper to Escape HTML in Console
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        // Toast Notification System
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastMessage.innerText = message;
+            
+            if (type === 'success') {
+                toastIcon.className = 'fa-solid fa-circle-check text-emerald-400';
+            } else {
+                toastIcon.className = 'fa-solid fa-circle-info text-cyan-400';
+            }
+
+            toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-2');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
